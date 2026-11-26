@@ -17,10 +17,45 @@ data_dir: data
 #   name:       run folder in results_root
 #   scenarios:  all (default) or a list of scenario folder names
 #   networks:   all (default) or a list of network names: design, val_wy<year>_<res> (e.g. val_wy1962_3H)
-#   detail:     standard (default) or full (full includes standard)
+#   detail:     light, standard (default) or full (each level includes the previous ones)
 #   roles:      optional, overrides the global roles below
+#   price_carriers: optional, overrides the global price_carriers below
 runs:
+  # Multi-year designs validated on other weather years
+  # (year_order_effect, load_shedding_ranking, resilience_multi_year_opt_new)
   - name: multi_year_greedy
+  - {name: multi_year_anti_greedy, detail: light, price_carriers: [AC, co2 atmosphere]}
+  - {name: multi_year_fixed_res_per_year_shuffled2, detail: light, price_carriers: [AC, co2 atmosphere]}
+  # Number of design years x resolution grid (nyears_nseg_grid_shuffled2_fixed)
+  - {name: nyears_nseg_sweep2, detail: light, price_carriers: [AC, co2 atmosphere]}
+  # Single-year 3H designs, reference of the segmentation study and baselines
+  # (system_cost_design_years, single_year_seg_dem_*, resilience_multi_year_opt_new)
+  - {name: yearly_3H, detail: light, price_carriers: [AC, co2 atmosphere]}
+  # Price-guided segmentation (single_year_seg_dem_new, single_year_seg_dem_all_years)
+  - {name: yearly_1460seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_1095seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_876seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_730seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_626seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_548seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_487seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_438seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_398seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_365seg, detail: light, price_carriers: [AC]}
+  - {name: yearly_337seg, detail: light, price_carriers: [AC]}
+  # Input-based segmentation
+  - {name: yearly_1460seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_1095seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_876seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_730seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_626seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_548seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_487seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_438seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_398seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_365seg_input, detail: light, price_carriers: [AC]}
+  - {name: yearly_337seg_input, detail: light, price_carriers: [AC]}
+  # Example of a later, detailed extraction of a few networks:
   # - name: multi_year_greedy
   #   scenarios: [weather_years_1958_1941_1252seg]
   #   networks: [design, val_wy1962_3H]
@@ -29,17 +64,23 @@ runs:
 # Which networks of each scenario: design, validation or both (default for every run entry)
 roles: [design, validation]
 
-# Datasets of each detail level. Levels are cumulative in this order (full = standard + full).
+# Datasets of each detail level. Levels are cumulative in this order
+# (standard = light + standard, full = light + standard + full).
 # Each name is an extractor in src/network_extraction/datasets/.
 detail_levels:
-  standard:
+  light:                     # sweeps with many networks (design studies, segmentation)
     - snapshots              # weightings and weather year
     - buses                  # scenario level: carrier, location, country, x, y
     - capacities             # scenario level: every asset of the design network
-    - summary                # capex, opex, shedding cost/energy, VOLL, objective
-    - shedding               # load-shedding dispatch per generator (validation networks)
-    - prices                 # nodal prices of price_carriers
+    - summary                # capex, opex, shedding cost/energy/peak, VOLL, objective, net CO2
     - global_constraints
+    - prices                 # nodal prices of price_carriers (can be set per run)
+    - ac_load                # electricity demand at the AC buses
+    - energy_totals          # supply/withdrawal over the horizon by (component, bus_carrier, carrier)
+    - marginal_costs         # validation networks: static marginal costs
+    - solver_stats           # rows, columns, solve time, memory (solver log and benchmark)
+  standard:
+    - shedding               # load-shedding dispatch per generator (validation networks)
     - generation_by_carrier
     - availability_by_carrier
     - link_p0_by_carrier

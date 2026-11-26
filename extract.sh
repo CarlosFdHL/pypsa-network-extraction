@@ -3,7 +3,7 @@
 # Interactive: ./extract.sh      Batch job: sbatch extract.sh
 #SBATCH --job-name=extract
 #SBATCH --partition=workq
-#SBATCH --time=04:00:00
+#SBATCH --time=24:00:00   # incremental: if it runs out of time, submit again and it continues
 #SBATCH --mem=32G
 #SBATCH --output=extract_%j.log
 

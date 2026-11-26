@@ -45,7 +45,7 @@ def extract_network(network_file, extractors, meta, scenario_out, cfg, info):
     n = pypsa.Network(str(network_file.path))
     for ex in todo:
         folder = scenario_out if ex.level == "scenario" else network_out
-        files = write_files(ex.func(n, cfg), folder, cfg["timeseries_format"])
+        files = write_files(ex.run(n, cfg, network_file), folder, cfg["timeseries_format"])
         target = meta["scenario_datasets"] if ex.level == "scenario" else entry["datasets"]
         record_dataset(target, ex.name, files, entry["source_mtime"], info)
         if ex.level == "scenario":
@@ -58,7 +58,11 @@ def extract_network(network_file, extractors, meta, scenario_out, cfg, info):
     gc.collect()
 
 
+RUN_OVERRIDES = ("price_carriers",)   # settings a run entry can override
+
+
 def extract_run(run, cfg, info):
+    cfg = {**cfg, **{k: run[k] for k in RUN_OVERRIDES if k in run}}
     run_dir = cfg["results_root"] / run["name"]
     run_out = cfg["data_dir"] / run["name"]
     extractors = selected_extractors(run_datasets(run, cfg))
@@ -86,7 +90,10 @@ def run(cfg):
     print(f"Extracting into {cfg['data_dir']} "
           f"(code {info['code_commit']}, pypsa {info['pypsa_version']}, force={cfg['force']})")
     for run_cfg in cfg["runs"]:
-        extract_run(run_cfg, cfg, info)
+        try:
+            extract_run(run_cfg, cfg, info)
+        except FileNotFoundError as err:   # a run that does not exist (yet): go on with the rest
+            print(f"  [WARNING] {err}: run skipped")
     print("Done")
 
 

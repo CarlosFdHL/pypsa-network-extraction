@@ -23,6 +23,7 @@ STANDARD_NETWORK = {
     "store_p_by_carrier.parquet", "storage_unit_p_by_carrier.parquet",
     "storage_unit_soc_by_carrier.parquet", "load_by_carrier.parquet",
     "supply_by_carrier.parquet", "withdrawal_by_carrier.parquet",
+    "ac_load.parquet", "energy_totals.csv", "solver_stats.csv",
 }
 
 
@@ -50,7 +51,7 @@ def test_files_and_meta(extracted):
     assert {p.name for p in scen.iterdir()} == {"meta.json", "capacities.csv", "buses.csv", "design", VAL}
     assert {p.name for p in (scen / "design").iterdir()} == STANDARD_NETWORK
     assert {p.name for p in (scen / VAL).iterdir()} == STANDARD_NETWORK | {
-        "shedding.parquet", "shedding_generators.csv"}
+        "shedding.parquet", "shedding_generators.csv", "marginal_costs.csv"}
     meta = json.loads((scen / "meta.json").read_text())
     for name, entry in meta["networks"].items():
         assert all(v == "ok" for v in entry["checks"].values()), (name, entry["checks"])
@@ -77,6 +78,7 @@ def test_summary_matches_pypsa(extracted):
     assert row.shed_energy_heat == pytest.approx(energy["heat shed"])
     assert row.shed_cost == pytest.approx(cost)
     assert row.voll_electricity == 1e4 and row.voll_heat == 5e4
+    assert row.shed_peak_electricity == pytest.approx(p[shed[n.generators.carrier[shed] == "elec load"]].sum(axis=1).max())
     assert row.objective == pytest.approx(row.opex_excl_shed + row.shed_cost, rel=1e-6)
     assert row.capex == pytest.approx(n.statistics.capex().sum())
     assert row.nyears == pytest.approx(1.0)
@@ -171,3 +173,40 @@ def test_force_list_reextracts_only_listed_datasets(extracted, capsys):
     assert "val_wy2001_3H: shedding" in out          # validation: only shedding
     assert out.count(": shedding") == 3               # the three validation networks
     assert "design: " not in out.replace("design: up to date", "")
+
+
+def test_new_light_datasets(extracted):
+    _, results, data = extracted
+    n = network(results, SCEN, "weather_year_2001_3H_base_s_1___2050.nc")
+    folder = data / RUN / SCEN / VAL
+
+    load = read(folder, "ac_load")
+    assert list(load.columns) == ["DE0 0"]
+    np.testing.assert_allclose(load["DE0 0"].to_numpy(), n.loads_t.p_set["DE0 0"].to_numpy(), rtol=1e-6)
+
+    totals = pd.read_csv(folder / "energy_totals.csv", index_col=[0, 1, 2], keep_default_na=False)
+    supply = n.statistics.supply(groupby=["bus_carrier", "carrier"], nice_names=False)
+    assert totals["supply"].sum() == pytest.approx(supply.sum())
+    assert totals.loc[("Generator", "AC", "elec load"), "supply"] > 0
+
+    stats = pd.read_csv(folder / "solver_stats.csv")
+    assert not stats.log_found.iloc[0]          # toy results have no solver logs
+
+    mc = pd.read_csv(folder / "marginal_costs.csv", index_col=[0, 1])
+    assert mc.loc[("Generator", "DE0 0 OCGT"), "marginal_cost"] == pytest.approx(80.0)
+
+    assert np.isnan(read(folder, "summary").co2_atmosphere_net.iloc[0])
+
+
+def test_light_detail_and_price_override(tmp_path):
+    results, data = tmp_path / "results", tmp_path / "data"
+    write_results(results, RUN, "single_year_1990", design_years=[1990], validation_years=[1991])
+    cfg = load_extract_config()
+    cfg.update(results_root=results, data_dir=data,
+               runs=[{"name": RUN, "detail": "light", "price_carriers": ["urban central heat"]},
+                     {"name": "missing_run"}])
+    run(cfg)
+    folder = data / RUN / "single_year_1990" / "val_wy1991_3H"
+    assert not (folder / "shedding.parquet").exists()
+    assert not (folder / "generation_by_carrier.parquet").exists()
+    assert list(read(folder, "prices").columns) == ["DE0 0 heat"]

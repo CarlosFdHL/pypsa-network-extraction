@@ -43,7 +43,7 @@ def base_network(snapshots, hours, seed):
           e_cyclic=True, capital_cost=1e4)
     n.add("Store", "DE0 0 urban central water tanks", bus="DE0 0 heat", carrier="urban central water tanks",
           e_nom_extendable=True, e_cyclic=True, capital_cost=500)
-    n.add("Load", "DE0 0 elec", bus="DE0 0", carrier="electricity", p_set=elec)
+    n.add("Load", "DE0 0", bus="DE0 0", carrier="electricity", p_set=elec)
     n.add("Load", "DE0 0 heat", bus="DE0 0 heat", p_set=heat)   # no carrier: grouped by bus carrier
     return n
 
