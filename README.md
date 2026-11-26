@@ -13,7 +13,7 @@ Runs on Sophia. The files are downloaded and analysed by the paper repo **pypsa-
 There are no command-line options: everything is in `extract_config.yaml`.
 
 Extraction is incremental per dataset: a network is opened only if one of the requested datasets is
-missing or the network file changed. `force: true` extracts everything again.
+missing or the network file changed. `force: true` extracts everything again; `force: [shedding]` only the listed datasets.
 
 ## Detail levels
 

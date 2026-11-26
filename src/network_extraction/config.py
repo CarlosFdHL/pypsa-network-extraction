@@ -23,6 +23,7 @@ def load_extract_config(path=EXTRACT_CONFIG):
     cfg.setdefault("force", False)
     cfg.setdefault("timeseries_format", "parquet")
     cfg.setdefault("check_rtol", 1e-4)
+    cfg.setdefault("shedding_zero_tol", 1e-3)
     cfg.setdefault("price_carriers", ["AC"])
     cfg["runs"] = [{"name": r} if isinstance(r, str) else r for r in cfg["runs"]]
     return cfg

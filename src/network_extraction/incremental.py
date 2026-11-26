@@ -12,5 +12,12 @@ def is_up_to_date(record, folder, source_mtime):
     return all((Path(folder) / f).exists() for f in record.get("files", []))
 
 
-def needs_extraction(record, folder, source_mtime, force):
-    return force or not is_up_to_date(record, folder, source_mtime)
+def is_forced(name, force):
+    """force is true/false (all datasets) or a list of dataset names."""
+    if isinstance(force, bool):
+        return force
+    return name in (force or [])
+
+
+def needs_extraction(name, record, folder, source_mtime, force):
+    return is_forced(name, force) or not is_up_to_date(record, folder, source_mtime)

@@ -151,3 +151,23 @@ def test_full_detail_afterwards_only_opens_selected_network(extracted, capsys):
     assert "val_wy1992_3H: up to date" in capsys.readouterr().out
     meta = json.loads((folder / "meta.json").read_text())
     assert "link_p2" in meta["networks"]["val_wy1992_3H"]["datasets"]
+
+
+def test_shedding_is_compact_float32(extracted):
+    cfg, results, data = extracted
+    n = network(results, SCEN, "weather_year_2001_3H_base_s_1___2050.nc")
+    shed = read(data / RUN / SCEN / VAL, "shedding")
+    assert (shed.dtypes == "float32").all()
+    raw = n.generators_t.p[shed.columns].to_numpy()
+    small = np.abs(raw) < cfg["shedding_zero_tol"]
+    assert (shed.to_numpy()[small] == 0).all()
+    np.testing.assert_allclose(shed.to_numpy()[~small], raw[~small], rtol=1e-6)
+
+
+def test_force_list_reextracts_only_listed_datasets(extracted, capsys):
+    cfg, _, _ = extracted
+    run(dict(cfg, force=["shedding"]))
+    out = capsys.readouterr().out
+    assert "val_wy2001_3H: shedding" in out          # validation: only shedding
+    assert out.count(": shedding") == 3               # the three validation networks
+    assert "design: " not in out.replace("design: up to date", "")

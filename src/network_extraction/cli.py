@@ -26,7 +26,7 @@ def pending_extractors(extractors, network_file, entry, meta, network_out, scena
             record, folder = meta["scenario_datasets"].get(ex.name), scenario_out
         else:
             record, folder = entry["datasets"].get(ex.name), network_out
-        if needs_extraction(record, folder, mtime, cfg["force"]):
+        if needs_extraction(ex.name, record, folder, mtime, cfg["force"]):
             todo.append(ex)
     return todo
 

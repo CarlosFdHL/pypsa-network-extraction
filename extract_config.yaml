@@ -69,7 +69,10 @@ detail_levels:
     - line_p0
     - load
 
-# true: extract everything again, even if the files are up to date
+# Extract again even if the files are up to date:
+#   false            only missing or outdated datasets
+#   true             every dataset
+#   [shedding, ...]  only these datasets (in the networks selected by runs)
 force: false
 
 # File format of time series (parquet or csv). Static tables are always csv.
@@ -86,6 +89,9 @@ run_config_globs: ['configs/*.yaml', '*/configs/*.yaml']
 shedding_carriers:
   electricity: elec load
   heat: heat shed
+
+# Shedding dispatch below this value [MW] is stored as 0 (solver noise; keeps shedding.parquet small)
+shedding_zero_tol: 1.0e-3
 
 # Bus carriers whose marginal prices are stored in prices.parquet
 price_carriers: [AC, low voltage, H2, urban central heat, urban decentral heat, co2 atmosphere]

@@ -1,6 +1,7 @@
 """Load shedding of a validation network.
 
-shedding.parquet:          raw dispatch p of every shedding generator [MW as in the model, before sign]
+shedding.parquet:          dispatch p of every shedding generator [MW as in the model, before sign], float32;
+                           |p| < shedding_zero_tol is stored as 0 (solver noise, so the file compresses)
 shedding_generators.csv:   per generator: carrier, type, bus, sign, marginal_cost, time_varying_cost
 
 Energy = p * sign * weight; cost = p * marginal_cost * weight (see metrics/shedding.py).
@@ -27,11 +28,12 @@ def shedding_static(n, gens):
     }).rename_axis("name")
 
 
-def shedding_dispatch(n, gens):
+def shedding_dispatch(n, gens, zero_tol=1e-3):
     p = n.generators_t.p.reindex(columns=gens.index, fill_value=0.0)
+    p = p.where(p.abs() >= zero_tol, 0.0)
     p.index = flat_snapshots(n)
     p.columns.name = "name"
-    return p.astype(float)
+    return p.astype("float32")
 
 
 @extractor("shedding", roles=("validation",))
@@ -43,5 +45,5 @@ def extract_shedding(n, cfg):
     if static.time_varying_cost.any():
         print("    [WARNING] time-varying marginal cost on shedding generators: "
               "shedding_generators.csv only stores the static value")
-    return {"shedding.parquet": shedding_dispatch(n, gens),
+    return {"shedding.parquet": shedding_dispatch(n, gens, cfg.get("shedding_zero_tol", 1e-3)),
             "shedding_generators.csv": static}
