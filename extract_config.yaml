@@ -1,0 +1,94 @@
+# Settings for the extraction on Sophia. Run with: ./extract.sh  (or: sbatch extract.sh)
+# Everything the extractor does is decided here; there are no command-line options.
+#
+# Typical use:
+#   1. Extract a whole sweep at standard detail (one entry with only the run name).
+#   2. Later, for a deeper analysis, add an entry for the same run with detail: full and the
+#      scenarios/networks you need. Only those networks are opened, and only the missing
+#      datasets are read. Then run sync.bat locally to download the new files.
+
+# Folder with the PyPSA-Eur results (contains one folder per run)
+results_root: ~/projects/pypsa-eur-aleks/results
+
+# Where the extracted data is written (relative paths are relative to this repo)
+data_dir: data
+
+# Runs to extract. Per entry:
+#   name:       run folder in results_root
+#   scenarios:  all (default) or a list of scenario folder names
+#   networks:   all (default) or a list of network names: design, val_wy<year>_<res> (e.g. val_wy1962_3H)
+#   detail:     standard (default) or full (full includes standard)
+#   roles:      optional, overrides the global roles below
+runs:
+  - name: multi_year_greedy
+  # - name: multi_year_greedy
+  #   scenarios: [weather_years_1958_1941_1252seg]
+  #   networks: [design, val_wy1962_3H]
+  #   detail: full
+
+# Which networks of each scenario: design, validation or both (default for every run entry)
+roles: [design, validation]
+
+# Datasets of each detail level. Levels are cumulative in this order (full = standard + full).
+# Each name is an extractor in src/network_extraction/datasets/.
+detail_levels:
+  standard:
+    - snapshots              # weightings and weather year
+    - buses                  # scenario level: carrier, location, country, x, y
+    - capacities             # scenario level: every asset of the design network
+    - summary                # capex, opex, shedding cost/energy, VOLL, objective
+    - shedding               # load-shedding dispatch per generator (validation networks)
+    - prices                 # nodal prices of price_carriers
+    - global_constraints
+    - generation_by_carrier
+    - availability_by_carrier
+    - link_p0_by_carrier
+    - link_p1_by_carrier
+    - link_p2_by_carrier
+    - link_p3_by_carrier
+    - link_p4_by_carrier
+    - store_e_by_carrier
+    - store_p_by_carrier
+    - storage_unit_p_by_carrier
+    - storage_unit_soc_by_carrier
+    - load_by_carrier
+    - supply_by_carrier      # statistics.supply by (bus_carrier, carrier)
+    - withdrawal_by_carrier  # statistics.withdrawal by (bus_carrier, carrier)
+  full:
+    - generation             # per asset
+    - availability           # time-varying p_max_pu per generator
+    - link_p0
+    - link_p1
+    - link_p2
+    - link_p3
+    - link_p4
+    - store_e
+    - store_p
+    - storage_unit_p
+    - storage_unit_soc
+    - line_p0
+    - load
+
+# true: extract everything again, even if the files are up to date
+force: false
+
+# File format of time series (parquet or csv). Static tables are always csv.
+timeseries_format: parquet
+
+# Network file names inside <run>/<scenario>/networks/
+design_pattern: '^base_s_.+\.nc$'
+validation_pattern: '^weather_year_(?P<weather_year>\d{4})_(?P<resolution>[^_]+)_base_s_.+\.nc$'
+
+# Run configs copied to data/<run>/config/ (globs relative to results/<run>/)
+run_config_globs: ['configs/*.yaml', '*/configs/*.yaml']
+
+# Load-shedding generator carriers by type
+shedding_carriers:
+  electricity: elec load
+  heat: heat shed
+
+# Bus carriers whose marginal prices are stored in prices.parquet
+price_carriers: [AC, low voltage, H2, urban central heat, urban decentral heat, co2 atmosphere]
+
+# Relative tolerance of the consistency checks
+check_rtol: 1.0e-4

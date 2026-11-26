@@ -1,0 +1,8 @@
+# Extracted data stays on Sophia and is downloaded by the paper repo
+data/
+extract_*.log
+
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
