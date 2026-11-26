@@ -42,3 +42,16 @@ def test_columns_differ_is_reported():
     df = snapshots(idx, hours)
     df["objective"] *= 2
     assert any("differ" in p for p in check_weightings(df))
+
+
+def test_dropped_leap_day_is_accepted():
+    """PyPSA-Eur drops 29 February: weather year 1963 (Jul 1963 - Jun 1964) then has 8760 h."""
+    idx = pd.date_range("1963-07-01", "1964-07-01", freq="3h", inclusive="left")
+    idx = idx[~((idx.month == 2) & (idx.day == 29))]
+    assert check_weightings(snapshots(idx, [3.0] * len(idx))) == []
+
+
+def test_kept_leap_day_needs_8784_hours():
+    idx = pd.date_range("1963-07-01", "1964-07-01", freq="3h", inclusive="left")
+    assert check_weightings(snapshots(idx, [3.0] * len(idx))) == []
+    assert check_weightings(snapshots(idx[:-8], [3.0] * (len(idx) - 8))) != []

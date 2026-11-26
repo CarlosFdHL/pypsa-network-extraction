@@ -29,7 +29,9 @@ def shedding_by_type(n, gens):
     cost = (p * mc).mul(w, axis=0).sum().groupby(gens).sum()
     static_mc = n.generators.loc[gens.index, "marginal_cost"].groupby(gens)
     voll = static_mc.mean()
-    if (static_mc.nunique() > 1).any():
+    # PyPSA-Eur adds a tiny random noise to marginal costs (~1e-2 EUR/MWh): only warn above 0.01 %
+    spread = (static_mc.max() - static_mc.min()) / voll.abs()
+    if (spread > 1e-4).any():
         print(f"    [WARNING] shedding generators of one type with different marginal costs: "
               f"{static_mc.agg(['min', 'max']).to_dict('index')}")
     return energy, cost, voll

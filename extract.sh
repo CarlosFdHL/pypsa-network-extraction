@@ -9,4 +9,4 @@
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(dirname "$0")}"
-PYTHONPATH=src python -m network_extraction.cli
+PYTHONPATH=src python -u -m network_extraction.cli   # -u: print progress immediately (also when piped to tee)
