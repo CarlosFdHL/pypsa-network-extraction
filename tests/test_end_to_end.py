@@ -210,3 +210,19 @@ def test_light_detail_and_price_override(tmp_path):
     assert not (folder / "shedding.parquet").exists()
     assert not (folder / "generation_by_carrier.parquet").exists()
     assert list(read(folder, "prices").columns) == ["DE0 0 heat"]
+
+
+def test_explicit_dataset_list(tmp_path):
+    results, data = tmp_path / "results", tmp_path / "data"
+    write_results(results, RUN, "single_year_1990", design_years=[1990], validation_years=[1991, 1992])
+    cfg = load_extract_config()
+    cfg.update(results_root=results, data_dir=data,
+               runs=[{"name": RUN, "networks": ["design", "val_wy1991_3H"],
+                      "datasets": ["buses", "capacities", "summary", "energy_totals"]}])
+    run(cfg)
+    scen = data / RUN / "single_year_1990"
+    assert {p.name for p in scen.iterdir()} == {"meta.json", "buses.csv", "capacities.csv", "design",
+                                                "val_wy1991_3H"}
+    assert {p.name for p in (scen / "val_wy1991_3H").iterdir()} == {"summary.csv", "energy_totals.csv"}
+    with pytest.raises(ValueError, match="Unknown datasets"):
+        run(dict(cfg, runs=[{"name": RUN, "datasets": ["sumary"]}]))

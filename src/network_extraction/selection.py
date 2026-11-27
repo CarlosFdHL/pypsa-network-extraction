@@ -1,7 +1,8 @@
 """What to extract for each entry of `runs` in extract_config.yaml.
 
 Detail levels are cumulative, in the order written in `detail_levels`:
-choosing "full" extracts the datasets of "standard" and of "full".
+choosing "full" extracts the datasets of "light", "standard" and "full".
+A run entry can instead list exactly the datasets it needs with `datasets: [...]`.
 """
 
 DEFAULT_DETAIL = "standard"
@@ -19,6 +20,12 @@ def datasets_for_detail(detail_levels, detail):
 
 
 def run_datasets(run_cfg, cfg):
+    if "datasets" in run_cfg:             # explicit list: overrides detail
+        known = {d for level in cfg["detail_levels"].values() for d in level}
+        unknown = [d for d in run_cfg["datasets"] if d not in known]
+        if unknown:
+            raise ValueError(f"Unknown datasets {unknown} in run {run_cfg['name']}. Available: {sorted(known)}")
+        return list(run_cfg["datasets"])
     return datasets_for_detail(cfg["detail_levels"], run_cfg.get("detail", DEFAULT_DETAIL))
 
 
