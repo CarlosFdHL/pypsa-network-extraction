@@ -21,51 +21,87 @@ data_dir: data
 #   datasets:   optional, exact list of datasets instead of a detail level (smallest download)
 #   roles:      optional, overrides the global roles below
 #   price_carriers: optional, overrides the global price_carriers below
-runs:
-  # Year-order study and shedding ranking (notebooks/year_order_effect.ipynb,
-  # load_shedding_ranking.ipynb): only costs and shedding of every network
-  - name: multi_year_anti_greedy
-    datasets: [summary]
-  - name: multi_year_fixed_res_per_year_shuffled2
-    datasets: [summary]
+# Reusable run settings (YAML anchors: "<<: *name" copies the keys into a run entry)
+x-multi_year: &multi_year           # validations: costs, shedding, net CO2; design: capacities, CO2 price
+  datasets: [summary, capacities, global_constraints, prices, marginal_costs]
+  price_carriers: [co2 atmosphere]
+x-seg_design: &seg_design           # segmentation study, design networks
+  roles: [design]
+  datasets: [buses, capacities, summary, global_constraints, prices, ac_load, solver_stats]
+  price_carriers: [AC]
+x-seg_validation: &seg_validation   # segmentation study and baselines, validation networks
+  roles: [validation]
+  datasets: [summary, marginal_costs]
 
-  # Design-grid study (notebooks/nyears_nseg_grid.ipynb): only what the notebook reads.
-  # design: capacities.csv and buses.csv (scenario level) and the capacity check of the validations
+runs:
+  # ---- Multi-year designs (year_order_effect, load_shedding_ranking, resilience_multi_year_opt_new)
+  - name: multi_year_greedy
+    datasets: [summary, capacities, global_constraints, prices, marginal_costs]
+    force: [summary]                 # once: its summary predates net CO2 and shedding peak; remove afterwards
+  - name: multi_year_anti_greedy
+    <<: *multi_year
+  - name: multi_year_fixed_res_per_year_shuffled2
+    <<: *multi_year
+
+  # ---- Design grid (nyears_nseg_grid)
   - name: nyears_nseg_sweep2
     networks: [design, val_wy1962_3H, val_wy1965_3H, val_wy1996_3H]
     datasets: [buses, capacities, summary, energy_totals]
 
-  # Runs of the other notebooks, not extracted yet: move them above this line when needed
-  # Multi-year designs validated on other weather years
-  # (year_order_effect, load_shedding_ranking, resilience_multi_year_opt_new)
-  # - name: multi_year_greedy
-  # Single-year 3H designs, reference of the segmentation study and baselines
-  # (system_cost_design_years, single_year_seg_dem_*, resilience_multi_year_opt_new)
-  # - {name: yearly_3H, detail: light, price_carriers: [AC, co2 atmosphere]}
-  # Price-guided segmentation (single_year_seg_dem_new, single_year_seg_dem_all_years)
-  # - {name: yearly_1460seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_1095seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_876seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_730seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_626seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_548seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_487seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_438seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_398seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_365seg, detail: light, price_carriers: [AC]}
-  # - {name: yearly_337seg, detail: light, price_carriers: [AC]}
-  # Input-based segmentation
-  # - {name: yearly_1460seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_1095seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_876seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_730seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_626seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_548seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_487seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_438seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_398seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_365seg_input, detail: light, price_carriers: [AC]}
-  # - {name: yearly_337seg_input, detail: light, price_carriers: [AC]}
+  # ---- Single-year 3H designs: reference of the segmentation study, system cost per year,
+  #      resilience baselines (system_cost_design_years, single_year_seg_dem_*, resilience)
+  - name: yearly_3H
+    <<: *seg_design
+    price_carriers: [AC, co2 atmosphere]
+  - {name: yearly_3H, <<: *seg_validation}
+
+  # ---- Price-guided segmentation, all years (single_year_seg_dem_all_years and _new)
+  - {name: yearly_1460seg, <<: *seg_design}
+  - {name: yearly_1460seg, <<: *seg_validation}
+  - {name: yearly_876seg, <<: *seg_design}
+  - {name: yearly_876seg, <<: *seg_validation}
+  - {name: yearly_626seg, <<: *seg_design}
+  - {name: yearly_626seg, <<: *seg_validation}
+  - {name: yearly_487seg, <<: *seg_design}
+  - {name: yearly_487seg, <<: *seg_validation}
+  - {name: yearly_398seg, <<: *seg_design}
+  - {name: yearly_398seg, <<: *seg_validation}
+  - {name: yearly_337seg, <<: *seg_design}
+  - {name: yearly_337seg, <<: *seg_validation}
+  # ---- Price-guided segmentation, only 1941 / 1986 / 2010 (single_year_seg_dem_new)
+  - {name: yearly_1095seg, <<: *seg_design}
+  - {name: yearly_1095seg, <<: *seg_validation}
+  - {name: yearly_730seg, <<: *seg_design}
+  - {name: yearly_730seg, <<: *seg_validation}
+  - {name: yearly_548seg, <<: *seg_design}
+  - {name: yearly_548seg, <<: *seg_validation}
+  - {name: yearly_438seg, <<: *seg_design}
+  - {name: yearly_438seg, <<: *seg_validation}
+  - {name: yearly_365seg, <<: *seg_design}
+  - {name: yearly_365seg, <<: *seg_validation}
+  # ---- Input-based segmentation
+  - {name: yearly_1460seg_input, <<: *seg_design}
+  - {name: yearly_1460seg_input, <<: *seg_validation}
+  - {name: yearly_876seg_input, <<: *seg_design}
+  - {name: yearly_876seg_input, <<: *seg_validation}
+  - {name: yearly_626seg_input, <<: *seg_design}
+  - {name: yearly_626seg_input, <<: *seg_validation}
+  - {name: yearly_487seg_input, <<: *seg_design}
+  - {name: yearly_487seg_input, <<: *seg_validation}
+  - {name: yearly_398seg_input, <<: *seg_design}
+  - {name: yearly_398seg_input, <<: *seg_validation}
+  - {name: yearly_337seg_input, <<: *seg_design}
+  - {name: yearly_337seg_input, <<: *seg_validation}
+  - {name: yearly_1095seg_input, <<: *seg_design}
+  - {name: yearly_1095seg_input, <<: *seg_validation}
+  - {name: yearly_730seg_input, <<: *seg_design}
+  - {name: yearly_730seg_input, <<: *seg_validation}
+  - {name: yearly_548seg_input, <<: *seg_design}
+  - {name: yearly_548seg_input, <<: *seg_validation}
+  - {name: yearly_438seg_input, <<: *seg_design}
+  - {name: yearly_438seg_input, <<: *seg_validation}
+  - {name: yearly_365seg_input, <<: *seg_design}
+  - {name: yearly_365seg_input, <<: *seg_validation}
 
   # Example of a later, detailed extraction of a few networks:
   # - name: multi_year_greedy

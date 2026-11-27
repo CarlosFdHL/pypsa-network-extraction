@@ -58,7 +58,7 @@ def extract_network(network_file, extractors, meta, scenario_out, cfg, info):
     gc.collect()
 
 
-RUN_OVERRIDES = ("price_carriers",)   # settings a run entry can override
+RUN_OVERRIDES = ("price_carriers", "force")   # settings a run entry can override
 
 
 def extract_run(run, cfg, info):

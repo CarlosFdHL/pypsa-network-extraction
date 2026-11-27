@@ -226,3 +226,10 @@ def test_explicit_dataset_list(tmp_path):
     assert {p.name for p in (scen / "val_wy1991_3H").iterdir()} == {"summary.csv", "energy_totals.csv"}
     with pytest.raises(ValueError, match="Unknown datasets"):
         run(dict(cfg, runs=[{"name": RUN, "datasets": ["sumary"]}]))
+
+
+def test_force_per_run_entry(extracted, capsys):
+    cfg, _, _ = extracted
+    run(dict(cfg, runs=[{"name": RUN, "networks": ["val_wy2001_3H"], "force": ["summary"]}]))
+    out = capsys.readouterr().out
+    assert "val_wy2001_3H: summary" in out and "design" not in out.split("networks")[-1].split("\n", 1)[1]
