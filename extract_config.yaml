@@ -22,6 +22,13 @@ data_dir: data
 #   roles:      optional, overrides the global roles below
 #   price_carriers: optional, overrides the global price_carriers below
 runs:
+  # Year-order study and shedding ranking (notebooks/year_order_effect.ipynb,
+  # load_shedding_ranking.ipynb): only costs and shedding of every network
+  - name: multi_year_anti_greedy
+    datasets: [summary]
+  - name: multi_year_fixed_res_per_year_shuffled2
+    datasets: [summary]
+
   # Design-grid study (notebooks/nyears_nseg_grid.ipynb): only what the notebook reads.
   # design: capacities.csv and buses.csv (scenario level) and the capacity check of the validations
   - name: nyears_nseg_sweep2
@@ -32,8 +39,6 @@ runs:
   # Multi-year designs validated on other weather years
   # (year_order_effect, load_shedding_ranking, resilience_multi_year_opt_new)
   # - name: multi_year_greedy
-  # - {name: multi_year_anti_greedy, detail: light, price_carriers: [AC, co2 atmosphere]}
-  # - {name: multi_year_fixed_res_per_year_shuffled2, detail: light, price_carriers: [AC, co2 atmosphere]}
   # Single-year 3H designs, reference of the segmentation study and baselines
   # (system_cost_design_years, single_year_seg_dem_*, resilience_multi_year_opt_new)
   # - {name: yearly_3H, detail: light, price_carriers: [AC, co2 atmosphere]}
@@ -142,7 +147,7 @@ shedding_carriers:
 shedding_zero_tol: 1.0e-3
 
 # Bus carriers whose marginal prices are stored in prices.parquet
-price_carriers: [AC, low voltage, urban central heat, urban decentral heat]
+price_carriers: [AC, low voltage, H2, urban central heat, urban decentral heat, co2 atmosphere]
 
 # Relative tolerance of the consistency checks
 check_rtol: 1.0e-4
